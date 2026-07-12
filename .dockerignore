@@ -1,0 +1,21 @@
+.git
+.idea
+.vscode
+.venv
+venv
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.ipynb
+sample test pics/
+Saved model file/
+Fishlatest.ipynb
+Fish_Species_Detection_Updated (1).ipynb
+final_test_all_images.py
+test_api.py
+test_batch_api.py
+test_logic_interpretation.py
+check_tflite_logic.py
+detailed_debug_disease_model.py
