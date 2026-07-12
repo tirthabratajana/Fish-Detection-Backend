@@ -8,6 +8,13 @@ from typing import Optional, Tuple
 import tensorflow as tf
 from ultralytics import YOLO
 
+
+# 1. Turn off oneDNN custom operations
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
+# 2. Optional: Suppress other standard info logs (0=all logs, 1=no INFO, 2=no WARNING)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 logger = logging.getLogger(__name__)
 
 
