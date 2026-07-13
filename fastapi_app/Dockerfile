@@ -7,7 +7,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app/fastapi_app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl gnupg2 apt-transport-https unixodbc-dev libgl1 libgomp1 \
+    && apt-get install -y --no-install-recommends \
+       build-essential \
+       curl \
+       gnupg2 \
+       apt-transport-https \
+       unixodbc-dev \
+       libgl1 \
+       libgomp1 \
+       libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
