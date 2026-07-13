@@ -19,6 +19,7 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /u
 
 COPY fastapi_app/requirements.txt ./requirements.txt
 RUN pip install --upgrade pip \
+    && pip install opencv-python-headless \
     && pip install -r requirements.txt \
     && pip install gunicorn
 

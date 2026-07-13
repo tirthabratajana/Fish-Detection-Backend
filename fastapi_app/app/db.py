@@ -40,6 +40,7 @@ def resolve_database_url() -> str:
 ROOT_DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/"
 RESOLVED_DATABASE_URL = resolve_database_url()
 IS_MYSQL = RESOLVED_DATABASE_URL.startswith("mysql")
+DB_READY = False
 
 if IS_MYSQL:
     # Create database if it does not exist
@@ -56,130 +57,134 @@ if IS_MYSQL:
     except SQLAlchemyError as err:
         raise RuntimeError(f"Unable to create or access MySQL database: {err}")
 
-# Engine for application data
 engine = create_engine(RESOLVED_DATABASE_URL, future=True, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
-# Create tables if they are not already present
-Base.metadata.create_all(bind=engine)
-
-if IS_MYSQL:
-    # Ensure schema migrations for existing MySQL tables
+def bootstrap_database() -> None:
+    global DB_READY
     try:
-        with engine.connect() as connection:
-            has_users_column = connection.execute(text(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'phone_number'"
-            ), {"db": MYSQL_DB}).scalar_one()
-            if has_users_column == 0:
-                connection.execute(text(
-                    "ALTER TABLE users ADD COLUMN phone_number VARCHAR(50) UNIQUE"
-                ))
+        Base.metadata.create_all(bind=engine)
 
-            has_ponds_table = connection.execute(text(
-                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
-                "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds'"
-            ), {"db": MYSQL_DB}).scalar_one()
-            if has_ponds_table:
-                has_verified_column = connection.execute(text(
+        if IS_MYSQL:
+            with engine.connect() as connection:
+                has_users_column = connection.execute(text(
                     "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'verified'"
+                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'users' AND COLUMN_NAME = 'phone_number'"
                 ), {"db": MYSQL_DB}).scalar_one()
-                if has_verified_column == 0:
+                if has_users_column == 0:
                     connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN verified BOOLEAN DEFAULT FALSE"
+                        "ALTER TABLE users ADD COLUMN phone_number VARCHAR(50) UNIQUE"
                     ))
 
-                # Backward compatibility: older schemas may still have ph/temperature as NOT NULL
-                # with no default, which would fail inserts now that API no longer sends them.
-                has_ph_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'ph'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_ph_column:
-                    connection.execute(text(
-                        "ALTER TABLE ponds MODIFY COLUMN ph FLOAT NOT NULL DEFAULT 0"
-                    ))
-
-                has_temperature_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'temperature'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_temperature_column:
-                    connection.execute(text(
-                        "ALTER TABLE ponds MODIFY COLUMN temperature FLOAT NOT NULL DEFAULT 0"
-                    ))
-
-                has_latitude_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'latitude'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_latitude_column == 0:
-                    connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN latitude FLOAT"
-                    ))
-
-                has_longitude_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'longitude'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_longitude_column == 0:
-                    connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN longitude FLOAT"
-                    ))
-
-                has_estimated_area_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'estimated_area'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_estimated_area_column == 0:
-                    connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN estimated_area FLOAT"
-                    ))
-
-                has_fish_species_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'fish_species'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_fish_species_column == 0:
-                    connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN fish_species TEXT"
-                    ))
-
-                has_geo_image_type_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'geo_image_content_type'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_geo_image_type_column == 0:
-                    connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN geo_image_content_type VARCHAR(64)"
-                    ))
-
-                has_geo_image_data_column = connection.execute(text(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'geo_image_data'"
-                ), {"db": MYSQL_DB}).scalar_one()
-                if has_geo_image_data_column == 0:
-                    connection.execute(text(
-                        "ALTER TABLE ponds ADD COLUMN geo_image_data LONGBLOB"
-                    ))
-
-                has_reports_table = connection.execute(text(
+                has_ponds_table = connection.execute(text(
                     "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
-                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'reports'"
+                    "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds'"
                 ), {"db": MYSQL_DB}).scalar_one()
-                if has_reports_table:
-                    has_report_verified = connection.execute(text(
+                if has_ponds_table:
+                    has_verified_column = connection.execute(text(
                         "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
-                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'reports' AND COLUMN_NAME = 'verified'"
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'verified'"
                     ), {"db": MYSQL_DB}).scalar_one()
-                    if has_report_verified == 0:
+                    if has_verified_column == 0:
                         connection.execute(text(
-                            "ALTER TABLE reports ADD COLUMN verified BOOLEAN DEFAULT FALSE"
+                            "ALTER TABLE ponds ADD COLUMN verified BOOLEAN DEFAULT FALSE"
                         ))
-    except SQLAlchemyError:
-        # ignore schema update failures; the application can still use the metadata-defined models
-        pass
+
+                    # Backward compatibility: older schemas may still have ph/temperature as NOT NULL
+                    # with no default, which would fail inserts now that API no longer sends them.
+                    has_ph_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'ph'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_ph_column:
+                        connection.execute(text(
+                            "ALTER TABLE ponds MODIFY COLUMN ph FLOAT NOT NULL DEFAULT 0"
+                        ))
+
+                    has_temperature_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'temperature'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_temperature_column:
+                        connection.execute(text(
+                            "ALTER TABLE ponds MODIFY COLUMN temperature FLOAT NOT NULL DEFAULT 0"
+                        ))
+
+                    has_latitude_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'latitude'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_latitude_column == 0:
+                        connection.execute(text(
+                            "ALTER TABLE ponds ADD COLUMN latitude FLOAT"
+                        ))
+
+                    has_longitude_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'longitude'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_longitude_column == 0:
+                        connection.execute(text(
+                            "ALTER TABLE ponds ADD COLUMN longitude FLOAT"
+                        ))
+
+                    has_estimated_area_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'estimated_area'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_estimated_area_column == 0:
+                        connection.execute(text(
+                            "ALTER TABLE ponds ADD COLUMN estimated_area FLOAT"
+                        ))
+
+                    has_fish_species_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'fish_species'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_fish_species_column == 0:
+                        connection.execute(text(
+                            "ALTER TABLE ponds ADD COLUMN fish_species TEXT"
+                        ))
+
+                    has_geo_image_type_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'geo_image_content_type'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_geo_image_type_column == 0:
+                        connection.execute(text(
+                            "ALTER TABLE ponds ADD COLUMN geo_image_content_type VARCHAR(64)"
+                        ))
+
+                    has_geo_image_data_column = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'ponds' AND COLUMN_NAME = 'geo_image_data'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_geo_image_data_column == 0:
+                        connection.execute(text(
+                            "ALTER TABLE ponds ADD COLUMN geo_image_data LONGBLOB"
+                        ))
+
+                    has_reports_table = connection.execute(text(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES "
+                        "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'reports'"
+                    ), {"db": MYSQL_DB}).scalar_one()
+                    if has_reports_table:
+                        has_report_verified = connection.execute(text(
+                            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                            "WHERE TABLE_SCHEMA = :db AND TABLE_NAME = 'reports' AND COLUMN_NAME = 'verified'"
+                        ), {"db": MYSQL_DB}).scalar_one()
+                        if has_report_verified == 0:
+                            connection.execute(text(
+                                "ALTER TABLE reports ADD COLUMN verified BOOLEAN DEFAULT FALSE"
+                            ))
+
+        DB_READY = True
+    except SQLAlchemyError as err:
+        DB_READY = False
+        print(f"Database bootstrap skipped or failed: {err}")
+
+
+bootstrap_database()
 
 
 def get_db():
