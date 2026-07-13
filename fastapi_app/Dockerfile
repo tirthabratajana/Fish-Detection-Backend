@@ -24,12 +24,12 @@ RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /u
     && apt-get update \
     && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
     && rm -rf /var/lib/apt/lists/*
-
+    
 COPY fastapi_app/requirements.txt ./requirements.txt
 RUN pip install --upgrade pip \
-    && sed -i 's/^ultralytics$/ultralytics-opencv-headless/g' requirements.txt \
     && pip install -r requirements.txt \
     && pip install gunicorn
+
 
 COPY fastapi_app/ ./
 COPY best.pt /app/
