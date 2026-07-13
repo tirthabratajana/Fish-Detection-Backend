@@ -13,12 +13,12 @@ MYSQL_HOST = os.getenv("MYSQL_HOST", "127.0.0.1")
 MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
 MYSQL_DB = os.getenv("MYSQL_DB", "fish_app")
 
-SQLSERVER_HOST = os.getenv("SQLSERVER_HOST", "").strip()
-SQLSERVER_PORT = os.getenv("SQLSERVER_PORT", "1433")
-SQLSERVER_DB = os.getenv("SQLSERVER_DB", MYSQL_DB)
-SQLSERVER_USER = os.getenv("SQLSERVER_USER", "").strip()
-SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD", "")
-SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server")
+SQLSERVER_HOST = os.getenv("SQLSERVER_HOST", "aquasense.database.windows.net").strip()
+SQLSERVER_PORT = os.getenv("SQLSERVER_PORT", "1433").strip()
+SQLSERVER_DB = os.getenv("SQLSERVER_DB", "fish_db").strip()
+SQLSERVER_USER = os.getenv("SQLSERVER_USER", "db_admin").strip()
+SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD", "Password@123").strip()
+SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server").strip()
 
 
 def resolve_database_url() -> str:
