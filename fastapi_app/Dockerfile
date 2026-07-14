@@ -6,9 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app/fastapi_app
 
-# 1. Install System Dependencies & SQL Drivers
+# 1. Install System Dependencies & SQL Drivers (Clean Debian 12 setup)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl gnupg2 unixodbc-dev \
+    build-essential \
+    curl \
+    gnupg2 \
+    unixodbc-dev \
     && curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft.gpg \
     && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/microsoft-prod.list \
     && apt-get update \
@@ -17,9 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY fastapi_app/requirements.txt ./requirements.txt
 
-# 2. CRITICAL FIX: Install CPU-only PyTorch (Saves 1.5GB RAM)
+# 2. CRITICAL FIX: Install CPU-only PyTorch & Database Packages
 RUN pip install --upgrade pip \
     && pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install pyodbc \
     && pip install -r requirements.txt \
     && pip install gunicorn
 

@@ -15,7 +15,7 @@ MYSQL_DB = os.getenv("MYSQL_DB", "fish_app")
 
 SQLSERVER_HOST = os.getenv("SQLSERVER_HOST", "aquasense.database.windows.net").strip()
 SQLSERVER_PORT = os.getenv("SQLSERVER_PORT", "1433").strip()
-SQLSERVER_DB = os.getenv("SQLSERVER_DB", "fish_db").strip()
+SQLSERVER_DB = os.getenv("SQLSERVER_DB", "fish_app").strip()
 SQLSERVER_USER = os.getenv("SQLSERVER_USER", "db_admin").strip()
 SQLSERVER_PASSWORD = os.getenv("SQLSERVER_PASSWORD", "Password@123").strip()
 SQLSERVER_DRIVER = os.getenv("SQLSERVER_DRIVER", "ODBC Driver 18 for SQL Server").strip()
